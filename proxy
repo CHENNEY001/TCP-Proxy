@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+from sys import *
+from socket import *
+
+
+def main():
+    if len(argv) != 4:
+        print("Wrong input format!")
+        print("Usage: ./proxy.py <listen-port> <fake-ip> <server-ip>")
+        exit(0)
+
+    localPort = int(argv[1])
+    localIp = argv[2]
+    serverIp = argv[3]
+    serverPort = 8080
+
+    proxy(localPort, localIp, serverPort, serverIp)
+
+
+def proxy(localPort, localIp, serverPort, serverIp):
+    serverSocket = socket(AF_INET, SOCK_STREAM)
+    serverSocket.bind((localIp, localPort))  # Bind the service address on the proxy
+    serverSocket.listen(5)  # Listen for connection requests
+
+    while True:
+        print("waiting for connection...")
+        conn, addr = serverSocket.accept()  # Waiting for connection from client
+        clientSocket = socket(AF_INET, SOCK_STREAM)
+        clientSocket.connect((serverIp, serverPort))
+        print("connected")
+        while True:
+            print("waiting for message from client...")
+            clientData = conn.recv(2048).decode()  # wait for response from client;
+            if not clientData:
+                continue
+            clientSocket.send(clientData.encode())  # socket transport byte data
+            if clientData == "exit" or clientData == b"":
+                break
+            print("client message sent")
+            print("waiting for message from server...")
+            serverData = clientSocket.recv(2048).decode()  # wait for response from server;
+            if not serverData:
+                continue
+            conn.send(serverData.encode())
+            if serverData == "exit":
+                break
+            print("client message sent")
+        conn.close()
+        clientSocket.close()
+        print("disconnected with client")
+        print("---------------------------------")
+
+
+if __name__ == '__main__':
+    main()
